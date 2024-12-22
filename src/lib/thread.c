@@ -188,7 +188,10 @@ int register_thread(thread_manager_t* thread_manager, pthread_t pthread, pid_t t
         // the BW modeling will spawn threads which will attempt to register with the thread manager if the
         // latency modeling is enabled. However the thread manager is instantiated later.
         //goto error;
-        return E_SUCCESS;
+        // return E_SUCCESS;
+        // Return error because otherwise we will segfault on accessing the thread's internal data to measure the latency statistics
+        free(thread);
+        return E_ERROR;
     }
 
     memset(thread, 0, sizeof(thread_t));
@@ -350,11 +353,13 @@ void* monitor_thread(void* arg)
 {
     thread_manager_t* manager = (thread_manager_t*) arg;
     struct timespec epoch_duration;
-//    time_t secs = thread_manager->max_epoch_duration_us / USECS_PER_SEC;
-//    long nanosecs = (thread_manager->max_epoch_duration_us % USECS_PER_SEC) * NANOS_PER_USEC;
+    // time_t secs = thread_manager->max_epoch_duration_us / USECS_PER_SEC;
+    // long nanosecs = (thread_manager->max_epoch_duration_us % USECS_PER_SEC) * NANOS_PER_USEC;
 
     epoch_duration.tv_sec = 0;
     epoch_duration.tv_nsec = MIN_EPOCH_DURATION_US * 1000;
+    // epoch_duration.tv_sec = secs;
+    // epoch_duration.tv_nsec = nanosecs; 
     while(1) {
         nanosleep(&epoch_duration, NULL);
         interrupt_threads(manager);
@@ -448,7 +453,7 @@ int reached_min_epoch_duration(thread_t* thread) {
     diff_us = (uint64_t) (current_time - thread->last_epoch_timestamp);
 #endif
 
-    DBG_LOG(DEBUG, "thread id [%d] last epoch was %lu usec ago\n", thread->tid, diff_us);
+    // DBG_LOG(DEBUG, "thread id [%d] last epoch was %lu usec ago\n", thread->tid, diff_us);
 
     if(diff_us >= thread_manager->min_epoch_duration_us) {
     	DBG_LOG(DEBUG, "thread id [%d] reached min epoch duration (%i usec)\n", thread->tid,
@@ -478,7 +483,7 @@ static int reached_max_epoch_duration(thread_t* thread) {
     diff_us = (uint64_t) (current_time - thread->last_epoch_timestamp);
 #endif
 
-    DBG_LOG(DEBUG, "thread id [%d] last epoch was %lu usec ago\n", thread->tid, diff_us);
+    // DBG_LOG(DEBUG, "thread id [%d] last epoch was %lu usec ago\n", thread->tid, diff_us);
 
     if(diff_us >= thread_manager->max_epoch_duration_us) {
     	DBG_LOG(DEBUG, "thread id [%d] reached max epoch duration (%i usec)\n", thread->tid,
